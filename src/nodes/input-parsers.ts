@@ -115,6 +115,7 @@ export function parseHistoryRequest(
   const offsetId = telegram.offsetId ?? msg.offsetId;
 
   return {
+    downloadMedia: Boolean(telegram.downloadMedia ?? msg.downloadMedia ?? false),
     includeRaw: Boolean(telegram.includeRaw ?? defaults.includeRaw),
     limit: normalizeInteger(telegram.limit ?? msg.limit, defaults.limit),
     offsetId: offsetId === undefined ? undefined : normalizeInteger(offsetId, 0, 0, Number.MAX_SAFE_INTEGER),
