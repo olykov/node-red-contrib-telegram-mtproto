@@ -1,6 +1,4 @@
 import { EventEmitter } from "node:events";
-import { mkdir } from "node:fs/promises";
-import path from "node:path";
 
 import bigInt from "big-integer";
 import { Api } from "telegram";
@@ -14,7 +12,6 @@ import type {
   AuthStatus,
   ConnectionCredentials,
   HistoryRequest,
-  NormalizedMedia,
   NormalizedMessage,
   RuntimeClientOptions,
   RuntimeStatusListener,
@@ -111,9 +108,7 @@ export class TelegramRuntimeClient {
     }
 
     const messages = await client.getMessages(entity, options);
-    const normalizedMessages = await Promise.all(
-      Array.from(messages, (message) => this.normalizeHistoryMessage(client, message, request))
-    );
+    const normalizedMessages = Array.from(messages, (message) => normalizeMessage(message, request.includeRaw));
 
     if (!request.unreadOnly) {
       return normalizedMessages;
@@ -285,78 +280,6 @@ export class TelegramRuntimeClient {
 
       throw error;
     }
-  }
-
-  private async normalizeHistoryMessage(
-    client: TelegramClientLike,
-    message: unknown,
-    request: HistoryRequest
-  ): Promise<NormalizedMessage> {
-    const normalizedMessage = normalizeMessage(message, request.includeRaw);
-
-    if (!request.downloadMedia || !normalizedMessage.media) {
-      return normalizedMessage;
-    }
-
-    normalizedMessage.media = await this.downloadMessageMedia(client, message, normalizedMessage);
-    return normalizedMessage;
-  }
-
-  private async downloadMessageMedia(
-    client: TelegramClientLike,
-    message: unknown,
-    normalizedMessage: NormalizedMessage
-  ): Promise<NormalizedMedia> {
-    const media = normalizedMessage.media;
-    if (!media || !client.downloadMedia) {
-      return media ?? { type: "media" };
-    }
-
-    const downloadDir = this.options.downloadDir?.trim();
-    if (!downloadDir) {
-      throw new Error("Telegram media download requested, but account Download Dir is empty.");
-    }
-
-    const channelPart = this.safePathPart(normalizedMessage.chatId ?? normalizedMessage.peer?.ref ?? "unknown-chat");
-    const messagePart = this.safePathPart(String(normalizedMessage.messageId ?? normalizedMessage.id ?? Date.now()));
-    const fileName = media.fileName || `telegram-${messagePart}${this.mediaExtension(media)}`;
-    const outputDir = path.join(downloadDir, channelPart);
-    const outputFile = path.join(outputDir, this.safePathPart(fileName));
-
-    await mkdir(outputDir, { recursive: true });
-    const result = await client.downloadMedia(message, { outputFile });
-
-    return {
-      ...media,
-      localPath: typeof result === "string" ? result : outputFile
-    };
-  }
-
-  private mediaExtension(media: NormalizedMedia): string {
-    if (media.fileName) {
-      const ext = path.extname(media.fileName);
-      if (ext) {
-        return ext;
-      }
-    }
-
-    if (media.mimeType) {
-      const subtype = media.mimeType.split("/")[1]?.split(";")[0]?.trim();
-      if (subtype) {
-        return `.${subtype.replace(/[^a-zA-Z0-9]+/g, "")}`;
-      }
-    }
-
-    if (media.type.toLowerCase().includes("photo")) {
-      return ".jpg";
-    }
-
-    return ".bin";
-  }
-
-  private safePathPart(value: string): string {
-    const normalizedValue = value.trim().replace(/[^a-zA-Z0-9._@-]+/g, "_").replace(/^_+|_+$/g, "");
-    return normalizedValue || "unknown";
   }
 
   private async resolveInputEntity(client: TelegramClientLike, value: unknown): Promise<unknown> {

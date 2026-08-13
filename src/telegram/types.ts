@@ -31,7 +31,6 @@ export interface NormalizedPeer {
 
 export interface NormalizedMedia {
   fileName?: string;
-  localPath?: string;
   mimeType?: string;
   size?: number;
   type: string;
@@ -64,7 +63,6 @@ export interface SendRequest {
 }
 
 export interface HistoryRequest {
-  downloadMedia: boolean;
   includeRaw: boolean;
   limit: number;
   offsetId?: number;
@@ -73,7 +71,6 @@ export interface HistoryRequest {
 }
 
 export interface RuntimeClientOptions extends ConnectionCredentials {
-  downloadDir?: string;
   reconnectMaxMs: number;
   reconnectMinMs: number;
 }
@@ -94,7 +91,6 @@ export interface TelegramClientLike {
   connect?(): Promise<void>;
   disconnect(): Promise<void>;
   disconnected?: Promise<unknown>;
-  downloadMedia?(media: unknown, options?: Record<string, unknown>): Promise<Buffer | string | undefined>;
   getEntity?(input: unknown): Promise<unknown>;
   getInputEntity?(input: unknown): Promise<unknown>;
   getMessages?(entity: unknown, options: Record<string, unknown>): Promise<unknown[]>;

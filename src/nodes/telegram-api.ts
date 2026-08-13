@@ -243,18 +243,16 @@ module.exports = function registerTelegramApiNodes(RED: NodeRedRuntime) {
     RED.nodes.createNode(this, config);
 
     const credentials = this.credentials ?? {};
-    const downloadDir = typeof config.downloadDir === "string" ? config.downloadDir.trim() : "";
     this.client = new TelegramRuntimeClient({
       apiHash: String(credentials.apiHash ?? ""),
       apiId: Number(credentials.apiId ?? 0),
-      downloadDir,
       phone: String(credentials.phone ?? ""),
       reconnectMaxMs: Math.max(Number(config.reconnectMaxMs ?? 30000), 1000),
       reconnectMinMs: Math.max(Number(config.reconnectMinMs ?? 2000), 250),
       sessionString: typeof credentials.sessionString === "string" ? credentials.sessionString : undefined
     });
 
-    this.downloadDir = downloadDir;
+    this.downloadDir = typeof config.downloadDir === "string" ? config.downloadDir : "";
     this.getStatus = () => this.client.getStatus();
 
     if (credentials.sessionString && credentials.apiId && credentials.apiHash && credentials.phone) {
@@ -343,7 +341,6 @@ module.exports = function registerTelegramApiNodes(RED: NodeRedRuntime) {
 
     const defaultPeer = typeof config.peer === "string" ? config.peer.trim() : undefined;
     const defaultLimit = Math.max(Number(config.limit ?? 10), 1);
-    const downloadMedia = Boolean(config.downloadMedia);
     const includeRaw = Boolean(config.includeRaw);
     const unreadOnly = Boolean(config.unreadOnly);
     const removeStatusListener = account.client.onStatus((status: AuthStatus) => {
@@ -358,7 +355,6 @@ module.exports = function registerTelegramApiNodes(RED: NodeRedRuntime) {
           peer: defaultPeer,
           unreadOnly
         });
-        request.downloadMedia = Boolean(request.downloadMedia || downloadMedia);
         const messages = await account.client.getHistory(request);
         send(
           mergeTelegramMetadata(msg, messages, {

@@ -72,10 +72,6 @@
     <input type="checkbox" id="node-input-includeRaw" style="width:auto" />
   </div>
   <div class="form-row">
-    <label for="node-input-downloadMedia"><i class="fa fa-download"></i> Download Media</label>
-    <input type="checkbox" id="node-input-downloadMedia" style="width:auto" />
-  </div>
-  <div class="form-row">
     <label for="node-input-unreadOnly"><i class="fa fa-envelope"></i> Unread Only</label>
     <input type="checkbox" id="node-input-unreadOnly" style="width:auto" />
   </div>
@@ -137,7 +133,6 @@
 <script type="text/html" data-help-name="telegram-api-history">
   <p>Reads recent Telegram messages for a peer.</p>
   <p>The node outputs an array of normalized messages in <code>msg.payload</code>.</p>
-  <p>Enable <code>Download Media</code> to save message media into the account download directory and add <code>media.localPath</code>.</p>
   <p>Enable <code>Unread Only</code> to return only unread incoming messages for the peer.</p>
 </script>
 
@@ -442,7 +437,6 @@
     registerSimpleNode("telegram-api-history", {
       defaults: {
         account: { required: true, type: "telegram-api-config" },
-        downloadMedia: { value: false },
         includeRaw: { value: false },
         limit: { value: 10, validate: RED.validators.number() },
         name: { value: "" },
