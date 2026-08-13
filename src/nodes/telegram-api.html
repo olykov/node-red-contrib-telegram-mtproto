@@ -1,0 +1,455 @@
+<script type="text/html" data-template-name="telegram-api-config">
+  <div class="form-row">
+    <label for="node-config-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-config-input-name" placeholder="Telegram API account" />
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-apiId"><i class="fa fa-key"></i> API ID</label>
+    <input type="text" id="node-config-input-apiId" placeholder="123456" />
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-apiHash"><i class="fa fa-lock"></i> API Hash</label>
+    <input type="password" id="node-config-input-apiHash" />
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-phone"><i class="fa fa-phone"></i> Phone</label>
+    <input type="text" id="node-config-input-phone" placeholder="+391234567890" />
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-reconnectMinMs"><i class="fa fa-repeat"></i> Reconnect Min</label>
+    <input type="number" id="node-config-input-reconnectMinMs" placeholder="2000" />
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-reconnectMaxMs"><i class="fa fa-repeat"></i> Reconnect Max</label>
+    <input type="number" id="node-config-input-reconnectMaxMs" placeholder="30000" />
+  </div>
+  <div class="form-row">
+    <label for="node-config-input-downloadDir"><i class="fa fa-folder-open"></i> Download Dir</label>
+    <input type="text" id="node-config-input-downloadDir" placeholder="/tmp/telegram-downloads" />
+  </div>
+  <div class="form-row" style="display:none">
+    <input type="password" id="node-config-input-sessionString" />
+  </div>
+
+  <div class="form-row telegram-api-auth-panel">
+    <label><i class="fa fa-shield"></i> Session</label>
+    <div class="telegram-api-auth-body">
+      <div id="telegram-api-auth-status" class="form-tips">Disconnected</div>
+      <div class="telegram-api-auth-actions">
+        <a href="#" class="editor-button" id="telegram-api-connect">Connect</a>
+        <a href="#" class="editor-button" id="telegram-api-test">Test Connection</a>
+        <a href="#" class="editor-button" id="telegram-api-disconnect">Disconnect</a>
+      </div>
+      <div class="telegram-api-auth-inputs">
+        <input type="text" id="telegram-api-code" placeholder="Telegram login code" />
+        <a href="#" class="editor-button" id="telegram-api-submit-code">Submit Code</a>
+      </div>
+      <div class="telegram-api-auth-inputs">
+        <input type="password" id="telegram-api-password" placeholder="Telegram 2FA password" />
+        <a href="#" class="editor-button" id="telegram-api-submit-password">Submit 2FA</a>
+      </div>
+      <div id="telegram-api-session-summary" class="form-tips">Use Connect to create or refresh the stored session string.</div>
+    </div>
+  </div>
+</script>
+
+<script type="text/html" data-help-name="telegram-api-config">
+  <p>Stores credentials and the Telegram user session for the other nodes in this palette.</p>
+  <p>Use <b>Connect</b> in the editor to complete the MTProto login flow, then save and deploy so the runtime can reconnect automatically.</p>
+</script>
+
+<script type="text/html" data-template-name="telegram-api-in">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-account"><i class="fa fa-user"></i> Account</label>
+    <input type="text" id="node-input-account" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-includeRaw"><i class="fa fa-code"></i> Include Raw</label>
+    <input type="checkbox" id="node-input-includeRaw" style="width:auto" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-unreadOnly"><i class="fa fa-envelope"></i> Unread Only</label>
+    <input type="checkbox" id="node-input-unreadOnly" style="width:auto" />
+  </div>
+</script>
+
+<script type="text/html" data-help-name="telegram-api-in">
+  <p>Emits normalized incoming Telegram messages from the configured user account.</p>
+  <p><code>msg.payload</code> contains the text body. <code>msg.telegram</code> carries Telegram metadata.</p>
+  <p>Enable <code>Unread Only</code> to ignore outgoing/self live events. This does not replay unread history from before the node started.</p>
+</script>
+
+<script type="text/html" data-template-name="telegram-api-send">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-account"><i class="fa fa-user"></i> Account</label>
+    <input type="text" id="node-input-account" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-peer"><i class="fa fa-comment"></i> Default Peer</label>
+    <input type="text" id="node-input-peer" placeholder="@username or numeric id" />
+  </div>
+</script>
+
+<script type="text/html" data-help-name="telegram-api-send">
+  <p>Sends a Telegram message or media item.</p>
+  <p>Use <code>msg.payload</code> for text, or provide a Buffer/path through <code>msg.payload</code> and <code>msg.telegram.mediaPath</code>.</p>
+</script>
+
+<script type="text/html" data-template-name="telegram-api-history">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-account"><i class="fa fa-user"></i> Account</label>
+    <input type="text" id="node-input-account" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-peer"><i class="fa fa-comment"></i> Default Peer</label>
+    <input type="text" id="node-input-peer" placeholder="@username or numeric id" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-limit"><i class="fa fa-list-ol"></i> Limit</label>
+    <input type="number" id="node-input-limit" placeholder="10" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-includeRaw"><i class="fa fa-code"></i> Include Raw</label>
+    <input type="checkbox" id="node-input-includeRaw" style="width:auto" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-unreadOnly"><i class="fa fa-envelope"></i> Unread Only</label>
+    <input type="checkbox" id="node-input-unreadOnly" style="width:auto" />
+  </div>
+</script>
+
+<script type="text/html" data-help-name="telegram-api-history">
+  <p>Reads recent Telegram messages for a peer.</p>
+  <p>The node outputs an array of normalized messages in <code>msg.payload</code>.</p>
+  <p>Enable <code>Unread Only</code> to return only unread incoming messages for the peer.</p>
+</script>
+
+<style>
+  .telegram-api-auth-panel .telegram-api-auth-body {
+    width: calc(100% - 110px);
+    margin-left: 110px;
+  }
+
+  .telegram-api-auth-actions,
+  .telegram-api-auth-inputs {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .telegram-api-auth-inputs input {
+    flex: 1;
+  }
+</style>
+
+<script type="text/javascript">
+  (function() {
+    function apiRequest(method, url, data) {
+      return $.ajax({
+        contentType: "application/json; charset=utf-8",
+        data: data ? JSON.stringify(data) : undefined,
+        dataType: "json",
+        type: method,
+        url: url
+      });
+    }
+
+    function updateAuthUi(status) {
+      var state = status && status.state ? status.state : "disconnected";
+      var label = status && status.label ? status.label : "Disconnected";
+      var sessionCaptured = state === "connected" && status && status.sessionString;
+
+      $("#telegram-api-auth-status").text(label);
+      $("#telegram-api-code").prop("disabled", state !== "awaiting_code");
+      $("#telegram-api-submit-code").toggleClass("disabled", state !== "awaiting_code");
+      $("#telegram-api-password").prop("disabled", state !== "awaiting_password");
+      $("#telegram-api-submit-password").toggleClass("disabled", state !== "awaiting_password");
+
+      if (sessionCaptured) {
+        $("#node-config-input-sessionString").val(status.sessionString);
+        $("#telegram-api-session-summary").text("Session captured. Save and deploy to make the runtime reconnect automatically.");
+      } else if (state === "disconnected") {
+        $("#telegram-api-session-summary").text("Use Connect to create or refresh the stored session string.");
+      }
+    }
+
+    function showError(xhr) {
+      var message = xhr && xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : "Telegram request failed.";
+      RED.notify(message, "error");
+    }
+
+    function readConfigCredentials() {
+      return {
+        apiHash: $("#node-config-input-apiHash").val(),
+        apiId: $("#node-config-input-apiId").val(),
+        phone: $("#node-config-input-phone").val(),
+        sessionString: $("#node-config-input-sessionString").val()
+      };
+    }
+
+    function registerSimpleNode(type, options) {
+      RED.nodes.registerType(type, $.extend(true, {
+        align: "right",
+        category: "telegram-api",
+        color: "#CFE2F3",
+        defaults: {
+          account: { required: true, type: "telegram-api-config" },
+          name: { value: "" }
+        }
+      }, options));
+    }
+
+    RED.nodes.registerType("telegram-api-config", {
+      category: "config",
+      credentials: {
+        apiHash: { type: "password" },
+        apiId: { type: "text" },
+        phone: { type: "text" },
+        sessionString: { type: "password" }
+      },
+      defaults: {
+        downloadDir: { value: "" },
+        name: { value: "" },
+        reconnectMaxMs: { value: 30000, validate: RED.validators.number() },
+        reconnectMinMs: { value: 2000, validate: RED.validators.number() }
+      },
+      label: function() {
+        return this.name || this.phone || "telegram-api";
+      },
+      oneditcancel: function() {
+        if (this._telegramApiCleanup) {
+          this._telegramApiCleanup(true);
+          this._telegramApiCleanup = null;
+        }
+      },
+      oneditprepare: function() {
+        var node = this;
+        var authToken = null;
+        var pollingHandle = null;
+
+        function stopPolling() {
+          if (pollingHandle) {
+            clearInterval(pollingHandle);
+            pollingHandle = null;
+          }
+        }
+
+        function pollTempStatus() {
+          if (!authToken) {
+            return;
+          }
+
+          apiRequest("GET", "telegram-api/auth/" + encodeURIComponent(authToken) + "/status")
+            .done(function(response) {
+              updateAuthUi(response.status);
+            })
+            .fail(function(xhr) {
+              if (xhr && xhr.status !== 404) {
+                showError(xhr);
+              }
+            });
+        }
+
+        function pollRuntimeStatus() {
+          if (!node.id) {
+            return;
+          }
+
+          apiRequest("GET", "telegram-api/config/" + encodeURIComponent(node.id) + "/status")
+            .done(function(response) {
+              updateAuthUi(response.status);
+            })
+            .fail(function(xhr) {
+              if (xhr && xhr.status !== 404) {
+                showError(xhr);
+              }
+            });
+        }
+
+        function startPolling() {
+          stopPolling();
+          pollingHandle = setInterval(function() {
+            if (authToken) {
+              pollTempStatus();
+              return;
+            }
+
+            pollRuntimeStatus();
+          }, 1500);
+        }
+
+        $("#telegram-api-connect").on("click", function(event) {
+          event.preventDefault();
+
+          apiRequest("POST", "telegram-api/auth/connect", $.extend({
+            authToken: authToken
+          }, readConfigCredentials()))
+            .done(function(response) {
+              authToken = response.authToken;
+              updateAuthUi(response.status);
+              startPolling();
+            })
+            .fail(showError);
+        });
+
+        $("#telegram-api-submit-code").on("click", function(event) {
+          event.preventDefault();
+          if (!authToken) {
+            RED.notify("Start Connect before submitting the Telegram login code.", "warning");
+            return;
+          }
+
+          apiRequest("POST", "telegram-api/auth/" + encodeURIComponent(authToken) + "/code", {
+            code: $("#telegram-api-code").val()
+          })
+            .done(function(response) {
+              $("#telegram-api-code").val("");
+              updateAuthUi(response.status);
+            })
+            .fail(showError);
+        });
+
+        $("#telegram-api-submit-password").on("click", function(event) {
+          event.preventDefault();
+          if (!authToken) {
+            RED.notify("Start Connect before submitting the Telegram 2FA password.", "warning");
+            return;
+          }
+
+          apiRequest("POST", "telegram-api/auth/" + encodeURIComponent(authToken) + "/password", {
+            password: $("#telegram-api-password").val()
+          })
+            .done(function(response) {
+              $("#telegram-api-password").val("");
+              updateAuthUi(response.status);
+            })
+            .fail(showError);
+        });
+
+        $("#telegram-api-test").on("click", function(event) {
+          event.preventDefault();
+
+          if (authToken) {
+            pollTempStatus();
+            return;
+          }
+
+          if (!node.id) {
+            RED.notify("Use Connect for a new config node, then save and deploy once the session is captured.", "warning");
+            return;
+          }
+
+          apiRequest("POST", "telegram-api/config/" + encodeURIComponent(node.id) + "/test")
+            .done(function(response) {
+              updateAuthUi(response.status);
+            })
+            .fail(showError);
+        });
+
+        $("#telegram-api-disconnect").on("click", function(event) {
+          event.preventDefault();
+
+          $("#node-config-input-sessionString").val("");
+
+          if (authToken) {
+            apiRequest("POST", "telegram-api/auth/" + encodeURIComponent(authToken) + "/disconnect")
+              .done(function(response) {
+                authToken = null;
+                updateAuthUi(response.status);
+              })
+              .fail(showError);
+            return;
+          }
+
+          if (!node.id) {
+            updateAuthUi({ label: "Disconnected", state: "disconnected" });
+            return;
+          }
+
+          apiRequest("POST", "telegram-api/config/" + encodeURIComponent(node.id) + "/disconnect")
+            .done(function(response) {
+              updateAuthUi(response.status);
+            })
+            .fail(showError);
+        });
+
+        updateAuthUi({ label: "Disconnected", state: "disconnected" });
+        pollRuntimeStatus();
+        startPolling();
+
+        this._telegramApiCleanup = function(disconnectTempAuth) {
+          stopPolling();
+          if (disconnectTempAuth && authToken) {
+            apiRequest("POST", "telegram-api/auth/" + encodeURIComponent(authToken) + "/disconnect");
+            authToken = null;
+          }
+        };
+      },
+      oneditsave: function() {
+        if (this._telegramApiCleanup) {
+          this._telegramApiCleanup(true);
+          this._telegramApiCleanup = null;
+        }
+      }
+    });
+
+    registerSimpleNode("telegram-api-in", {
+      defaults: {
+        account: { required: true, type: "telegram-api-config" },
+        includeRaw: { value: false },
+        name: { value: "" },
+        unreadOnly: { value: false }
+      },
+      icon: "font-awesome/fa-inbox",
+      inputs: 0,
+      label: function() {
+        return this.name || "telegram-api in";
+      },
+      outputs: 1
+    });
+
+    registerSimpleNode("telegram-api-send", {
+      defaults: {
+        account: { required: true, type: "telegram-api-config" },
+        name: { value: "" },
+        peer: { value: "" }
+      },
+      icon: "font-awesome/fa-paper-plane",
+      inputs: 1,
+      label: function() {
+        return this.name || "telegram-api send";
+      },
+      outputs: 1
+    });
+
+    registerSimpleNode("telegram-api-history", {
+      defaults: {
+        account: { required: true, type: "telegram-api-config" },
+        includeRaw: { value: false },
+        limit: { value: 10, validate: RED.validators.number() },
+        name: { value: "" },
+        peer: { value: "" },
+        unreadOnly: { value: false }
+      },
+      icon: "font-awesome/fa-history",
+      inputs: 1,
+      label: function() {
+        return this.name || "telegram-api history";
+      },
+      outputs: 1
+    });
+
+  })();
+</script>
