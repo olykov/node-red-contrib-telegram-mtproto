@@ -89,6 +89,78 @@ describe("telegram-api-get", () => {
     expect(msg.telegram.senderId).toBe("123");
   });
 
+  it.each([
+    ["photo", Api.InputMessagesFilterPhotos],
+    ["video", Api.InputMessagesFilterVideo],
+    ["voice", Api.InputMessagesFilterVoice],
+    ["audio", Api.InputMessagesFilterMusic],
+    ["file", Api.InputMessagesFilterDocument],
+    ["video_note", Api.InputMessagesFilterRoundVideo],
+    ["animation", Api.InputMessagesFilterGif]
+  ] as const)("uses Telegram's native %s filter", async (contentType, Filter) => {
+    const getEntity = vi.fn().mockResolvedValue({ id: "42" });
+    const getMessages = vi.fn().mockResolvedValue([]);
+    const runtime = createRuntime({ getEntity, getMessages });
+    const request = parseHistoryRequest({ payload: { content_type: contentType } }, {
+      includeRaw: false, limit: 10, peer: "42", unreadOnly: false
+    });
+
+    await runtime.getHistory(request);
+
+    expect(getMessages.mock.calls[0][1].filter).toBeInstanceOf(Filter);
+  });
+
+  it("keeps query, sender and media selection when payload is replaced between pages", async () => {
+    const getEntity = vi.fn().mockResolvedValue({ id: "42" });
+    const getMessages = vi.fn().mockResolvedValue([{ id: 100, message: "Release" }]);
+    const runtime = createRuntime({ getEntity, getMessages });
+    const defaults = { includeRaw: false, limit: 100, peer: "42", unreadOnly: false };
+    const msg: Record<string, unknown> = {
+      payload: { query: "  release  ", sender_id: "123", content_type: "video" }
+    };
+
+    const firstPage = await runtime.getHistory(parseHistoryRequest(msg, defaults));
+    expect(firstPage).toHaveLength(1);
+    msg.payload = null;
+    (msg.telegram as Record<string, unknown>).offsetId = 100;
+    const nextRequest = parseHistoryRequest(msg, defaults);
+    await runtime.getHistory(nextRequest);
+
+    expect(nextRequest).toMatchObject({ query: "release", senderId: "123", contentType: "video", offsetId: 100 });
+    for (const [, options] of getMessages.mock.calls) {
+      expect(options).toMatchObject({ search: "release", fromUser: "123", limit: 100 });
+      expect(options.filter).toBeInstanceOf(Api.InputMessagesFilterVideo);
+    }
+    expect(getMessages.mock.calls[1][1].offsetId).toBe(100);
+  });
+
+  it("allows a blank query to clear an existing query without changing page length", async () => {
+    const getEntity = vi.fn().mockResolvedValue({ id: "42" });
+    const getMessages = vi.fn().mockResolvedValue([
+      { id: 8, message: "Text" },
+      { id: 7, message: "Caption", media: { className: "MessageMediaPhoto" } }
+    ]);
+    const runtime = createRuntime({ getEntity, getMessages });
+    const msg = { payload: { query: "   " }, telegram: { peer: "42", query: "previous" } };
+    const request = parseHistoryRequest(msg, { includeRaw: false, limit: 10, unreadOnly: false });
+
+    expect(await runtime.getHistory(request)).toHaveLength(2);
+    expect(msg.telegram.query).toBeUndefined();
+    expect(getMessages.mock.calls[0][1]).not.toHaveProperty("search");
+    expect(getMessages.mock.calls[0][1]).not.toHaveProperty("filter");
+  });
+
+  it.each([
+    [{ query: 123 }, "query must be a string"],
+    [{ content_type: "unknown" }, "content_type must be one of"],
+    [{ content_type: "text" }, "content_type must be one of"],
+    [{ content_type: ["photo", "video"] }, "content_type must be one of"]
+  ])("rejects unsupported history filters: %j", (payload, error) => {
+    expect(() => parseHistoryRequest({ payload }, {
+      includeRaw: false, limit: 10, peer: "42", unreadOnly: false
+    })).toThrow(String(error));
+  });
+
   it("reads one message by ID or Telegram link without downloading media", async () => {
     const getEntity = vi.fn().mockResolvedValue({ id: "chat" });
     const getMessages = vi.fn().mockResolvedValue([{

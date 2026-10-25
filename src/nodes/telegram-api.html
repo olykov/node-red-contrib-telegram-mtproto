@@ -133,6 +133,7 @@
 <script type="text/html" data-help-name="telegram-api-history">
   <p>Reads recent Telegram messages for a peer.</p>
   <p>The node outputs an array of normalized messages in <code>msg.payload</code>.</p>
+  <p>Optional <code>msg.payload.query</code>, <code>msg.payload.sender_id</code>, and <code>msg.payload.content_type</code> apply Telegram search filters. Supported media types: <code>photo</code>, <code>video</code>, <code>voice</code>, <code>audio</code>, <code>file</code>, <code>video_note</code>, <code>animation</code>. Filters are retained in <code>msg.telegram</code> for pagination.</p>
   <p>Enable <code>Unread Only</code> to return only unread incoming messages for the peer.</p>
 </script>
 
@@ -174,7 +175,7 @@
 
 <script type="text/html" data-help-name="telegram-api-get">
   <p>Reads history, dialogs, forum topics, or a single message through the configured Telegram user account.</p>
-  <p><b>History:</b> set <code>msg.telegram.peer</code> or a default peer. Optional <code>msg.payload.sender_id</code> filters by sender. The output is an array of messages.</p>
+  <p><b>History:</b> set <code>msg.telegram.peer</code> or a default peer. Optional <code>msg.payload.query</code>, <code>msg.payload.sender_id</code>, and <code>msg.payload.content_type</code> apply Telegram search filters. Supported media types: <code>photo</code>, <code>video</code>, <code>voice</code>, <code>audio</code>, <code>file</code>, <code>video_note</code>, <code>animation</code>. Filters are retained in <code>msg.telegram</code> for pagination. The output is an array of messages. Text-only selection must be handled by the calling flow.</p>
   <p><b>Chats:</b> reads all dialogs, including archived chats. Set optional <code>msg.payload.query</code> to filter titles and usernames.</p>
   <p><b>Topics:</b> set <code>msg.payload.chat_id</code> and optional <code>msg.payload.query</code>. The output contains topic IDs, titles, count, and <code>next_cursor</code> for another page. Only forum chats support this operation.</p>
   <p><b>Message:</b> set <code>msg.payload.chat_id</code> and <code>msg.payload.message_id</code>, or set <code>msg.payload.link</code> to a t.me message URL. The output contains <code>message</code>, or <code>null</code> if it is unavailable.</p>

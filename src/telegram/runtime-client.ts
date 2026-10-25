@@ -11,6 +11,7 @@ import { SessionController } from "./session-controller";
 import type {
   AuthStatus,
   ConnectionCredentials,
+  HistoryContentType,
   HistoryRequest,
   MessageRequest,
   NormalizedMessage,
@@ -23,6 +24,16 @@ import type {
   TelegramClientLike
 } from "./types";
 import { formatError, peerInputFromValue } from "./utils";
+
+const HISTORY_FILTERS: Record<HistoryContentType, new () => Api.TypeMessagesFilter> = {
+  photo: Api.InputMessagesFilterPhotos,
+  video: Api.InputMessagesFilterVideo,
+  voice: Api.InputMessagesFilterVoice,
+  audio: Api.InputMessagesFilterMusic,
+  file: Api.InputMessagesFilterDocument,
+  video_note: Api.InputMessagesFilterRoundVideo,
+  animation: Api.InputMessagesFilterGif
+};
 
 interface RuntimeEvents {
   message: [NormalizedMessage];
@@ -102,6 +113,12 @@ export class TelegramRuntimeClient {
     };
     if (request.senderId !== undefined) {
       options.fromUser = request.senderId;
+    }
+    if (request.query !== undefined) {
+      options.search = request.query;
+    }
+    if (request.contentType !== undefined) {
+      options.filter = new HISTORY_FILTERS[request.contentType]();
     }
 
     if (request.unreadOnly) {

@@ -63,11 +63,16 @@ export interface SendRequest {
   text?: string;
 }
 
+export const HISTORY_CONTENT_TYPES = ["photo", "video", "voice", "audio", "file", "video_note", "animation"] as const;
+export type HistoryContentType = typeof HISTORY_CONTENT_TYPES[number];
+
 export interface HistoryRequest {
+  contentType?: HistoryContentType;
   includeRaw: boolean;
   limit: number;
   offsetId?: number;
   peer: string | number | Record<string, unknown>;
+  query?: string;
   senderId?: string | number;
   unreadOnly: boolean;
 }

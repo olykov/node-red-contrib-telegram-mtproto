@@ -326,15 +326,40 @@ Use one `telegram-api-get` node and choose its **Get** operation:
 
 Chats lists the account's dialogs, including archived chats. The optional query matches chat titles and usernames without case sensitivity. Topics works only for Telegram forum chats. If `next_cursor` is present, pass it as `msg.payload.cursor` with the same `chat_id` to fetch the next page. History accepts optional `msg.payload.sender_id` to filter by Telegram user ID on the server. Normalized messages include `contentType` (`text`, `photo`, `video`, `video_note`, `voice`, `audio`, `sticker`, `animation`, `file`, `link_preview`, or `other`) and `replyToMessageId`. Media is not downloaded. The existing `telegram-api-history` node remains available for imported flows.
 
+### History search filters
+
+The History operation and the existing `telegram-api-history` node accept these optional inputs:
+
+| Payload input | Retained pagination input | Telegram behavior |
+| --- | --- | --- |
+| `msg.payload.query` | `msg.telegram.query` | Text search using GramJS `search` |
+| `msg.payload.sender_id` | `msg.telegram.senderId` | Sender selection using GramJS `fromUser` |
+| `msg.payload.content_type` | `msg.telegram.contentType` | Native Telegram media filter |
+
+Supported `content_type` values are `photo`, `video`, `voice`, `audio`, `file`, `video_note`, and `animation`. One type can be selected per request. All three filters can be combined. A payload value overrides its retained value. An empty or whitespace-only query clears the retained text query.
+
+```javascript
+msg.telegram = { peer: "@example_chat", limit: 100 };
+msg.payload = { query: "release", content_type: "video", sender_id: "123456789" };
+return msg;
+```
+
+After each page, the caller may replace `msg.payload` and set `msg.telegram.offsetId` to the last returned message ID. The filters remain in `msg.telegram`. Remove the retained filter fields when reusing that message for an unfiltered request.
+
+The output remains an array of normalized messages. `content_type` uses [Telegram's native media filters](https://core.telegram.org/type/MessagesFilter), so its categories follow Telegram search semantics rather than a comparison with the normalized output `contentType`. Text search uses [messages.search](https://core.telegram.org/method/messages.search); it does not transcribe audio or video.
+
+There is no native text-only media filter. `content_type: "text"` is rejected by the palette. A calling flow that needs this selection must omit the media filter and select normalized `contentType === "text"` after fetching each page, preserving the original page length and cursor for pagination.
+
 ## Current v1 scope
 
 - Incoming messages via `NewMessage`
 - Text and media sends
 - Basic history fetch
+- Native text search, sender selection, and media filters for history
 - Chat discovery and forum topic listing
 - Single-message lookup by ID or t.me link
 
-Planned: a paginated reply ancestry tool returning up to 10 parent messages per request. Text and content-type filters for search are also deferred.
+Cancelled: the reply ancestry chain tool.
 
 Not included yet:
 

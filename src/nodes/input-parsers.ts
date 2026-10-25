@@ -1,4 +1,5 @@
-import type { HistoryRequest, MessageRequest, SendRequest, TopicRequest } from "../telegram/types";
+import { HISTORY_CONTENT_TYPES } from "../telegram/types";
+import type { HistoryContentType, HistoryRequest, MessageRequest, SendRequest, TopicRequest } from "../telegram/types";
 
 function normalizePeerValue(value: unknown): string | number | Record<string, unknown> | undefined {
   if (typeof value === "string") {
@@ -118,15 +119,27 @@ export function parseHistoryRequest(
   if (senderId !== undefined && !/^\d+$/.test(String(senderId).trim())) {
     throw new Error("Telegram sender_id must be a user ID.");
   }
-  if (senderId !== undefined) {
-    telegram.senderId = String(senderId).trim();
+  const query = payload.query ?? telegram.query;
+  if (query !== undefined && typeof query !== "string") {
+    throw new Error("Telegram history query must be a string.");
   }
+  const contentType = payload.content_type ?? telegram.contentType;
+  if (contentType !== undefined && !HISTORY_CONTENT_TYPES.includes(contentType as HistoryContentType)) {
+    throw new Error(`Telegram history content_type must be one of: ${HISTORY_CONTENT_TYPES.join(", ")}.`);
+  }
+  const normalizedQuery = typeof query === "string" ? query.trim() || undefined : undefined;
+  telegram.senderId = senderId === undefined ? undefined : String(senderId).trim();
+  telegram.query = normalizedQuery;
+  telegram.contentType = contentType;
+  msg.telegram = telegram;
 
   return {
+    contentType: contentType as HistoryContentType | undefined,
     includeRaw: Boolean(telegram.includeRaw ?? defaults.includeRaw),
     limit: normalizeInteger(telegram.limit ?? msg.limit, defaults.limit),
     offsetId: offsetId === undefined ? undefined : normalizeInteger(offsetId, 0, 0, Number.MAX_SAFE_INTEGER),
     peer,
+    query: normalizedQuery,
     senderId: senderId === undefined ? undefined : String(senderId).trim(),
     unreadOnly: Boolean(telegram.unreadOnly ?? msg.unreadOnly ?? defaults.unreadOnly)
   };
