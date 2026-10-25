@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { parseHistoryRequest, parseSendRequest, parseTopicRequest } from "./input-parsers";
+import { parseHistoryRequest, parseMessageRequest, parseSendRequest, parseTopicRequest } from "./input-parsers";
 import { SessionController } from "../telegram/session-controller";
 import { TelegramRuntimeClient } from "../telegram/runtime-client";
 import type { AuthStatus } from "../telegram/types";
@@ -402,6 +402,21 @@ module.exports = function registerTelegramApiNodes(RED: NodeRedRuntime) {
         } else if (operation === "topics") {
           const request = parseTopicRequest(msg, defaultPeer);
           msg.payload = await account.client.getTopics(request);
+        } else if (operation === "message") {
+          const request = parseMessageRequest(msg, defaultPeer);
+          const message = await account.client.getMessage(request);
+          msg.payload = {
+            message: message ? {
+              id: message.id,
+              chat_id: request.peer,
+              date: message.date,
+              text: message.text,
+              sender_id: message.senderId ?? null,
+              content_type: message.contentType,
+              reply_to_message_id: message.replyToMessageId ?? null,
+              media: message.media ?? null
+            } : null
+          };
         } else if (operation === "history") {
           const request = parseHistoryRequest(msg, {
             includeRaw: Boolean(config.includeRaw),

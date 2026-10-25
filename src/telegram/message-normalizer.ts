@@ -56,6 +56,35 @@ function normalizeMedia(media: unknown): NormalizedMedia | undefined {
   };
 }
 
+function contentType(media: unknown): string {
+  if (!media || typeof media !== "object") {
+    return "text";
+  }
+
+  const value = media as Record<string, unknown>;
+  const mediaClass = String(value.className ?? value._ ?? "");
+  if (mediaClass.includes("Photo")) {
+    return "photo";
+  }
+  if (mediaClass.includes("WebPage")) {
+    return "link_preview";
+  }
+  if (!mediaClass.includes("Document")) {
+    return "other";
+  }
+
+  const document = value.document as Record<string, unknown> | undefined;
+  const attributes = Array.isArray(document?.attributes) ? document.attributes as Array<Record<string, unknown>> : [];
+  for (const attribute of attributes) {
+    const name = String(attribute.className ?? attribute._ ?? "");
+    if (name.includes("Sticker")) return "sticker";
+    if (name.includes("Animated")) return "animation";
+    if (name.includes("Video")) return attribute.roundMessage ? "video_note" : "video";
+    if (name.includes("Audio")) return attribute.voice ? "voice" : "audio";
+  }
+  return "file";
+}
+
 function normalizeMessageDate(value: unknown): string | undefined {
   if (value instanceof Date) {
     return value.toISOString();
@@ -84,6 +113,7 @@ export function normalizeMessage(message: unknown, includeRaw = false): Normaliz
 
   return {
     chatId: peer?.id,
+    contentType: contentType(messageRecord.media),
     date: normalizeMessageDate(messageRecord.date),
     id: messageId,
     media: normalizeMedia(messageRecord.media),

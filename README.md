@@ -313,7 +313,7 @@ History node input supports:
 - `msg.telegram.offsetId` or `msg.offsetId` to paginate older history
 - `msg.telegram.unreadOnly` or `msg.unreadOnly` to return only unread incoming messages
 
-## Read chats, topics, and history
+## Read chats, topics, history, and a message
 
 Use one `telegram-api-get` node and choose its **Get** operation:
 
@@ -322,8 +322,9 @@ Use one `telegram-api-get` node and choose its **Get** operation:
 | Chats | Optional `{ "query": "project" }` | `{ "chats": [{ "chat_id": "…", "title": "…", "type": "group" }], "count": 1 }` |
 | Topics | `{ "chat_id": "-1001234567890" }`, optional `query` and `cursor` | `{ "topics": [{ "thread_id": 123, "title": "Ideas", "closed": false, "pinned": false }], "count": 1, "next_cursor": null }` |
 | History | `msg.telegram.peer` or the configured default peer; existing history inputs also apply | Array of normalized messages |
+| Message | `{ "chat_id": "-1001234567890", "message_id": 123 }` or `{ "link": "https://t.me/c/1234567890/123" }` | `{ "message": { "id": 123, "text": "…", "content_type": "text", "reply_to_message_id": null } }` or `{ "message": null }` |
 
-Chats lists the account's dialogs, including archived chats. The optional query matches chat titles and usernames without case sensitivity. Topics works only for Telegram forum chats. If `next_cursor` is present, pass it as `msg.payload.cursor` with the same `chat_id` to fetch the next page. The existing `telegram-api-history` node remains available for imported flows.
+Chats lists the account's dialogs, including archived chats. The optional query matches chat titles and usernames without case sensitivity. Topics works only for Telegram forum chats. If `next_cursor` is present, pass it as `msg.payload.cursor` with the same `chat_id` to fetch the next page. History accepts optional `msg.payload.sender_id` to filter by Telegram user ID on the server. Normalized messages include `contentType` (`text`, `photo`, `video`, `video_note`, `voice`, `audio`, `sticker`, `animation`, `file`, `link_preview`, or `other`) and `replyToMessageId`. Media is not downloaded. The existing `telegram-api-history` node remains available for imported flows.
 
 ## Current v1 scope
 
@@ -331,6 +332,9 @@ Chats lists the account's dialogs, including archived chats. The optional query 
 - Text and media sends
 - Basic history fetch
 - Chat discovery and forum topic listing
+- Single-message lookup by ID or t.me link
+
+Planned: a paginated reply ancestry tool returning up to 10 parent messages per request. Text and content-type filters for search are also deferred.
 
 Not included yet:
 

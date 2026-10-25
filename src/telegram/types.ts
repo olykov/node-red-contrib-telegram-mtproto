@@ -38,6 +38,7 @@ export interface NormalizedMedia {
 
 export interface NormalizedMessage {
   chatId?: string;
+  contentType: string;
   date?: string;
   id?: number | string;
   media?: NormalizedMedia;
@@ -67,7 +68,13 @@ export interface HistoryRequest {
   limit: number;
   offsetId?: number;
   peer: string | number | Record<string, unknown>;
+  senderId?: string | number;
   unreadOnly: boolean;
+}
+
+export interface MessageRequest {
+  messageId: number;
+  peer: string | number | Record<string, unknown>;
 }
 
 export interface TelegramChat {

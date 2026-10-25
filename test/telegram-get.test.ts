@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Api } from "telegram";
 
-import { parseTopicRequest } from "../src/nodes/input-parsers";
+import { parseHistoryRequest, parseMessageRequest, parseTopicRequest } from "../src/nodes/input-parsers";
+import { normalizeMessage } from "../src/telegram/message-normalizer";
 import { TelegramRuntimeClient } from "../src/telegram/runtime-client";
 import { SessionController } from "../src/telegram/session-controller";
 import type { TelegramClientLike } from "../src/telegram/types";
@@ -72,6 +73,53 @@ describe("telegram-api-get", () => {
 
     expect(history[0]).toMatchObject({ id: 7, text: "Hello" });
     expect(getMessages).toHaveBeenCalledWith({ id: "42" }, { limit: 10, offsetId: undefined });
+  });
+
+  it("filters history by sender through Telegram", async () => {
+    const getEntity = vi.fn().mockResolvedValue({ id: "42" });
+    const getMessages = vi.fn().mockResolvedValue([]);
+    const runtime = createRuntime({ getEntity, getMessages });
+    const msg = { payload: { sender_id: "123" }, telegram: { peer: "42", senderId: undefined as string | undefined } };
+    const request = parseHistoryRequest(msg, {
+      includeRaw: false, limit: 10, unreadOnly: false
+    });
+
+    await runtime.getHistory(request);
+    expect(getMessages).toHaveBeenCalledWith({ id: "42" }, { limit: 10, offsetId: undefined, fromUser: "123" });
+    expect(msg.telegram.senderId).toBe("123");
+  });
+
+  it("reads one message by ID or Telegram link without downloading media", async () => {
+    const getEntity = vi.fn().mockResolvedValue({ id: "chat" });
+    const getMessages = vi.fn().mockResolvedValue([{
+      id: 123,
+      message: "Reply",
+      replyTo: { replyToMsgId: 100 },
+      media: { className: "MessageMediaPhoto" }
+    }]);
+    const runtime = createRuntime({ getEntity, getMessages });
+
+    expect(parseMessageRequest({ payload: { link: "https://t.me/c/1234567890/123" } })).toEqual({ peer: "-1001234567890", messageId: 123 });
+    expect(parseMessageRequest({ payload: { link: "https://t.me/example_chat/123" } })).toEqual({ peer: "@example_chat", messageId: 123 });
+    expect(parseMessageRequest({ payload: { link: "https://t.me/example_chat/45/123" } })).toEqual({ peer: "@example_chat", messageId: 123 });
+    expect(parseMessageRequest({ payload: { chat_id: "42", message_id: 123 } })).toEqual({ peer: "42", messageId: 123 });
+    expect(await runtime.getMessage({ peer: "42", messageId: 123 })).toMatchObject({
+      id: 123, contentType: "photo", replyToMessageId: 100
+    });
+    expect(getMessages).toHaveBeenCalledWith({ id: "chat" }, { ids: 123 });
+    expect(() => parseMessageRequest({ payload: { link: "https://example.com/example_chat/123" } })).toThrow("t.me URL");
+  });
+
+  it("reports useful media types without fetching files", () => {
+    expect(normalizeMessage({ id: 1, message: "Text" }).contentType).toBe("text");
+    expect(normalizeMessage({ id: 2, media: {
+      className: "MessageMediaDocument",
+      document: { attributes: [{ className: "DocumentAttributeAudio", voice: true }] }
+    } }).contentType).toBe("voice");
+    expect(normalizeMessage({ id: 3, media: {
+      className: "MessageMediaDocument",
+      document: { attributes: [{ className: "DocumentAttributeVideo", roundMessage: false }] }
+    } }).contentType).toBe("video");
   });
 
   it("requires a chat and valid cursor offsets for topic reads", () => {

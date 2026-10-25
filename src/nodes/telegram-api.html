@@ -151,6 +151,7 @@
       <option value="history">History</option>
       <option value="chats">Chats</option>
       <option value="topics">Topics</option>
+      <option value="message">Message</option>
     </select>
   </div>
   <div class="form-row telegram-api-get-peer">
@@ -172,10 +173,11 @@
 </script>
 
 <script type="text/html" data-help-name="telegram-api-get">
-  <p>Reads history, dialogs, or forum topics through the configured Telegram user account.</p>
-  <p><b>History:</b> set <code>msg.telegram.peer</code> or a default peer. The output is an array of messages.</p>
+  <p>Reads history, dialogs, forum topics, or a single message through the configured Telegram user account.</p>
+  <p><b>History:</b> set <code>msg.telegram.peer</code> or a default peer. Optional <code>msg.payload.sender_id</code> filters by sender. The output is an array of messages.</p>
   <p><b>Chats:</b> reads all dialogs, including archived chats. Set optional <code>msg.payload.query</code> to filter titles and usernames.</p>
   <p><b>Topics:</b> set <code>msg.payload.chat_id</code> and optional <code>msg.payload.query</code>. The output contains topic IDs, titles, count, and <code>next_cursor</code> for another page. Only forum chats support this operation.</p>
+  <p><b>Message:</b> set <code>msg.payload.chat_id</code> and <code>msg.payload.message_id</code>, or set <code>msg.payload.link</code> to a t.me message URL. The output contains <code>message</code>, or <code>null</code> if it is unavailable.</p>
 </script>
 
 <style>

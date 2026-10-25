@@ -1,4 +1,4 @@
-import type { HistoryRequest, SendRequest, TopicRequest } from "../telegram/types";
+import type { HistoryRequest, MessageRequest, SendRequest, TopicRequest } from "../telegram/types";
 
 function normalizePeerValue(value: unknown): string | number | Record<string, unknown> | undefined {
   if (typeof value === "string") {
@@ -113,14 +113,61 @@ export function parseHistoryRequest(
   }
 
   const offsetId = telegram.offsetId ?? msg.offsetId;
+  const payload = (msg.payload && typeof msg.payload === "object" ? msg.payload : {}) as Record<string, unknown>;
+  const senderId = payload.sender_id ?? telegram.senderId;
+  if (senderId !== undefined && !/^\d+$/.test(String(senderId).trim())) {
+    throw new Error("Telegram sender_id must be a user ID.");
+  }
+  if (senderId !== undefined) {
+    telegram.senderId = String(senderId).trim();
+  }
 
   return {
     includeRaw: Boolean(telegram.includeRaw ?? defaults.includeRaw),
     limit: normalizeInteger(telegram.limit ?? msg.limit, defaults.limit),
     offsetId: offsetId === undefined ? undefined : normalizeInteger(offsetId, 0, 0, Number.MAX_SAFE_INTEGER),
     peer,
+    senderId: senderId === undefined ? undefined : String(senderId).trim(),
     unreadOnly: Boolean(telegram.unreadOnly ?? msg.unreadOnly ?? defaults.unreadOnly)
   };
+}
+
+export function parseMessageRequest(msg: Record<string, unknown>, defaultPeer?: unknown): MessageRequest {
+  const payload = (msg.payload && typeof msg.payload === "object" ? msg.payload : {}) as Record<string, unknown>;
+  const link = payload.link;
+  let peer = normalizePeerValue(payload.chat_id ?? defaultPeer);
+  let messageId: unknown = payload.message_id;
+
+  if (link !== undefined) {
+    if (typeof link !== "string") {
+      throw new Error("Telegram message link must be a t.me URL.");
+    }
+    let url: URL;
+    try {
+      url = new URL(link);
+    } catch {
+      throw new Error("Telegram message link must be a t.me URL.");
+    }
+    if (url.protocol !== "https:" || url.hostname !== "t.me") {
+      throw new Error("Telegram message link must be a t.me URL.");
+    }
+    const parts = url.pathname.split("/").filter(Boolean);
+    if (parts[0] === "c" && parts.length >= 3 && /^\d+$/.test(parts[1])) {
+      peer = `-100${parts[1]}`;
+      messageId = parts[parts.length - 1];
+    } else if ((parts.length === 2 || parts.length === 3) && /^[A-Za-z][A-Za-z0-9_]{3,}$/.test(parts[0])) {
+      peer = `@${parts[0]}`;
+      messageId = parts[parts.length - 1];
+    } else {
+      throw new Error("Unsupported Telegram message link.");
+    }
+  }
+
+  const numericId = Number(messageId);
+  if (!peer || !Number.isSafeInteger(numericId) || numericId <= 0) {
+    throw new Error("Provide a Telegram chat_id and positive message_id, or a t.me message link.");
+  }
+  return { peer, messageId: numericId };
 }
 
 export function parseTopicRequest(msg: Record<string, unknown>, defaultPeer?: unknown): TopicRequest {

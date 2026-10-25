@@ -12,6 +12,7 @@ import type {
   AuthStatus,
   ConnectionCredentials,
   HistoryRequest,
+  MessageRequest,
   NormalizedMessage,
   RuntimeClientOptions,
   RuntimeStatusListener,
@@ -99,6 +100,9 @@ export class TelegramRuntimeClient {
       limit: request.limit,
       offsetId: request.offsetId
     };
+    if (request.senderId !== undefined) {
+      options.fromUser = request.senderId;
+    }
 
     if (request.unreadOnly) {
       const { readInboxMaxId, unreadCount } = await this.getUnreadHistoryWindow(client, request.peer);
@@ -118,6 +122,21 @@ export class TelegramRuntimeClient {
     }
 
     return normalizedMessages.filter((message) => !message.outgoing);
+  }
+
+  async getMessage(request: MessageRequest): Promise<NormalizedMessage | null> {
+    const client = await this.ensureClient();
+    const entity = await this.resolveEntity(client, request.peer);
+    if (!client.getMessages) {
+      throw new Error("Telegram client does not support message reads.");
+    }
+
+    const messages = await client.getMessages(entity, { ids: request.messageId });
+    const message = messages[0] as Record<string, unknown> | undefined;
+    if (!message || String(message.className ?? message._ ?? "") === "MessageEmpty") {
+      return null;
+    }
+    return normalizeMessage(message);
   }
 
   async getChats(query = ""): Promise<TelegramChat[]> {
