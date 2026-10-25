@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { parseHistoryRequest, parseSendRequest } from "./input-parsers";
+import { parseHistoryRequest, parseSendRequest, parseTopicRequest } from "./input-parsers";
 import { SessionController } from "../telegram/session-controller";
 import { TelegramRuntimeClient } from "../telegram/runtime-client";
 import type { AuthStatus } from "../telegram/types";
@@ -374,6 +374,58 @@ module.exports = function registerTelegramApiNodes(RED: NodeRedRuntime) {
     });
   }
 
+  function TelegramApiGetNode(this: NodeInstance, config: Record<string, unknown>) {
+    RED.nodes.createNode(this, config);
+
+    const account = RED.nodes.getNode(config.account);
+    if (!account?.client) {
+      this.status({ fill: "red", shape: "ring", text: "config missing" });
+      return;
+    }
+
+    const operation = String(config.operation ?? "history");
+    const defaultPeer = typeof config.peer === "string" ? config.peer.trim() : undefined;
+    const removeStatusListener = account.client.onStatus((status: AuthStatus) => {
+      this.status(statusToIndicator(status));
+    });
+
+    this.on("input", async (msg: Record<string, unknown>, send: (message: unknown) => void, done: (error?: Error) => void) => {
+      try {
+        if (operation === "chats") {
+          const payload = (msg.payload && typeof msg.payload === "object" ? msg.payload : {}) as Record<string, unknown>;
+          const query = payload.query;
+          if (query !== undefined && typeof query !== "string") {
+            throw new Error("Telegram chat query must be a string.");
+          }
+          const chats = await account.client.getChats(query ?? "");
+          msg.payload = { chats, count: chats.length };
+        } else if (operation === "topics") {
+          const request = parseTopicRequest(msg, defaultPeer);
+          msg.payload = await account.client.getTopics(request);
+        } else if (operation === "history") {
+          const request = parseHistoryRequest(msg, {
+            includeRaw: Boolean(config.includeRaw),
+            limit: Math.max(Number(config.limit ?? 10), 1),
+            peer: defaultPeer,
+            unreadOnly: Boolean(config.unreadOnly)
+          });
+          msg.payload = await account.client.getHistory(request);
+        } else {
+          throw new Error(`Unknown Telegram get operation: ${operation}`);
+        }
+        send(msg);
+        done();
+      } catch (error) {
+        this.status({ fill: "red", shape: "ring", text: "get failed" });
+        done(new Error(formatError(error)));
+      }
+    });
+
+    this.on("close", () => {
+      removeStatusListener();
+    });
+  }
+
   RED.nodes.registerType("telegram-api-config", TelegramApiConfigNode, {
     credentials: {
       apiHash: { type: "password" },
@@ -385,4 +437,5 @@ module.exports = function registerTelegramApiNodes(RED: NodeRedRuntime) {
   RED.nodes.registerType("telegram-api-in", TelegramApiInNode);
   RED.nodes.registerType("telegram-api-send", TelegramApiSendNode);
   RED.nodes.registerType("telegram-api-history", TelegramApiHistoryNode);
+  RED.nodes.registerType("telegram-api-get", TelegramApiGetNode);
 };

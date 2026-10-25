@@ -12,6 +12,7 @@ Initial code was imported from [`alessandromatera/telegram-api`](https://github.
 - `telegram-api-in`: emits incoming messages as normalized Node-RED messages, optionally ignoring outgoing/self live events
 - `telegram-api-send`: sends text or media to a peer
 - `telegram-api-history`: fetches recent messages for a peer, optionally only unread incoming messages
+- `telegram-api-get`: reads message history, lists chats by name, or lists forum topics in a chat
 
 ## Runtime requirements
 
@@ -312,11 +313,24 @@ History node input supports:
 - `msg.telegram.offsetId` or `msg.offsetId` to paginate older history
 - `msg.telegram.unreadOnly` or `msg.unreadOnly` to return only unread incoming messages
 
+## Read chats, topics, and history
+
+Use one `telegram-api-get` node and choose its **Get** operation:
+
+| Get | Input | `msg.payload` output |
+| --- | --- | --- |
+| Chats | Optional `{ "query": "project" }` | `{ "chats": [{ "chat_id": "…", "title": "…", "type": "group" }], "count": 1 }` |
+| Topics | `{ "chat_id": "-1001234567890" }`, optional `query` and `cursor` | `{ "topics": [{ "thread_id": 123, "title": "Ideas", "closed": false, "pinned": false }], "count": 1, "next_cursor": null }` |
+| History | `msg.telegram.peer` or the configured default peer; existing history inputs also apply | Array of normalized messages |
+
+Chats lists the account's dialogs, including archived chats. The optional query matches chat titles and usernames without case sensitivity. Topics works only for Telegram forum chats. If `next_cursor` is present, pass it as `msg.payload.cursor` with the same `chat_id` to fetch the next page. The existing `telegram-api-history` node remains available for imported flows.
+
 ## Current v1 scope
 
 - Incoming messages via `NewMessage`
 - Text and media sends
 - Basic history fetch
+- Chat discovery and forum topic listing
 
 Not included yet:
 

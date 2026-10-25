@@ -70,6 +70,38 @@ export interface HistoryRequest {
   unreadOnly: boolean;
 }
 
+export interface TelegramChat {
+  chat_id: string;
+  title: string;
+  type: "user" | "group" | "channel";
+  username?: string;
+}
+
+export interface TopicCursor {
+  offset_date: number;
+  offset_id: number;
+  offset_topic: number;
+}
+
+export interface TopicRequest {
+  peer: string | number | Record<string, unknown>;
+  query?: string;
+  cursor?: TopicCursor;
+}
+
+export interface TelegramTopic {
+  thread_id: number;
+  title: string;
+  closed: boolean;
+  pinned: boolean;
+}
+
+export interface TopicPage {
+  topics: TelegramTopic[];
+  count: number;
+  next_cursor: TopicCursor | null;
+}
+
 export interface RuntimeClientOptions extends ConnectionCredentials {
   reconnectMaxMs: number;
   reconnectMinMs: number;
@@ -92,6 +124,7 @@ export interface TelegramClientLike {
   disconnect(): Promise<void>;
   disconnected?: Promise<unknown>;
   getEntity?(input: unknown): Promise<unknown>;
+  getDialogs?(params?: Record<string, unknown>): Promise<unknown[]>;
   getInputEntity?(input: unknown): Promise<unknown>;
   getMessages?(entity: unknown, options: Record<string, unknown>): Promise<unknown[]>;
   invoke?(request: unknown): Promise<unknown>;

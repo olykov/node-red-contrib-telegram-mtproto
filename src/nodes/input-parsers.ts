@@ -1,4 +1,4 @@
-import type { HistoryRequest, SendRequest } from "../telegram/types";
+import type { HistoryRequest, SendRequest, TopicRequest } from "../telegram/types";
 
 function normalizePeerValue(value: unknown): string | number | Record<string, unknown> | undefined {
   if (typeof value === "string") {
@@ -121,4 +121,33 @@ export function parseHistoryRequest(
     peer,
     unreadOnly: Boolean(telegram.unreadOnly ?? msg.unreadOnly ?? defaults.unreadOnly)
   };
+}
+
+export function parseTopicRequest(msg: Record<string, unknown>, defaultPeer?: unknown): TopicRequest {
+  const payload = (msg.payload && typeof msg.payload === "object" ? msg.payload : {}) as Record<string, unknown>;
+  const telegram = (msg.telegram as Record<string, unknown> | undefined) ?? {};
+  const peer = normalizePeerValue(payload.chat_id ?? telegram.peer ?? msg.peer ?? defaultPeer);
+  if (!peer) {
+    throw new Error("No Telegram chat provided. Set msg.payload.chat_id or configure a default peer.");
+  }
+
+  const query = payload.query ?? telegram.query;
+  if (query !== undefined && typeof query !== "string") {
+    throw new Error("Telegram topic query must be a string.");
+  }
+
+  const value = payload.cursor;
+  let cursor: TopicRequest["cursor"];
+  if (value !== undefined) {
+    const fields = value as Record<string, unknown>;
+    const offsetDate = Number(fields?.offset_date);
+    const offsetId = Number(fields?.offset_id);
+    const offsetTopic = Number(fields?.offset_topic);
+    if (![offsetDate, offsetId, offsetTopic].every((item) => Number.isSafeInteger(item) && item >= 0)) {
+      throw new Error("Telegram topic cursor must contain non-negative integer offsets.");
+    }
+    cursor = { offset_date: offsetDate, offset_id: offsetId, offset_topic: offsetTopic };
+  }
+
+  return { peer, query: typeof query === "string" ? query.trim() || undefined : undefined, cursor };
 }

@@ -16,6 +16,9 @@ import type {
   RuntimeClientOptions,
   RuntimeStatusListener,
   SendRequest,
+  TelegramChat,
+  TopicPage,
+  TopicRequest,
   TelegramClientLike
 } from "./types";
 import { formatError, peerInputFromValue } from "./utils";
@@ -115,6 +118,73 @@ export class TelegramRuntimeClient {
     }
 
     return normalizedMessages.filter((message) => !message.outgoing);
+  }
+
+  async getChats(query = ""): Promise<TelegramChat[]> {
+    const client = await this.ensureClient();
+    if (!client.getDialogs) {
+      throw new Error("Telegram client does not support dialog reads.");
+    }
+
+    const dialogs = await client.getDialogs({});
+    const needle = query.trim().toLowerCase();
+    return dialogs.flatMap((value) => {
+      const dialog = value as Record<string, unknown>;
+      const entity = (dialog.entity ?? {}) as Record<string, unknown>;
+      const chatId = dialog.id === undefined ? "" : String(dialog.id);
+      const title = String(dialog.title ?? dialog.name ?? "").trim();
+      const username = typeof entity.username === "string" ? entity.username : undefined;
+      if (!chatId || (needle && !`${title} ${username ?? ""}`.toLowerCase().includes(needle))) {
+        return [];
+      }
+
+      const type = dialog.isUser ? "user" : dialog.isGroup ? "group" : "channel";
+      return [{ chat_id: chatId, title, type, username } as TelegramChat];
+    });
+  }
+
+  async getTopics(request: TopicRequest): Promise<TopicPage> {
+    const client = await this.ensureClient();
+    if (!client.invoke) {
+      throw new Error("Telegram client does not support topic reads.");
+    }
+
+    const channel = await this.resolveInputEntity(client, request.peer);
+    const cursor = request.cursor;
+    const response = await client.invoke(new Api.channels.GetForumTopics({
+      channel: channel as Api.TypeEntityLike,
+      q: request.query,
+      offsetDate: cursor?.offset_date ?? 0,
+      offsetId: cursor?.offset_id ?? 0,
+      offsetTopic: cursor?.offset_topic ?? 0,
+      limit: 100
+    })) as Api.messages.ForumTopics;
+
+    const topics = response.topics.flatMap((topic) => {
+      if (!(topic instanceof Api.ForumTopic)) {
+        return [];
+      }
+      return [{
+        thread_id: topic.id,
+        title: topic.title,
+        closed: Boolean(topic.closed),
+        pinned: Boolean(topic.pinned)
+      }];
+    });
+
+    const last = response.topics[response.topics.length - 1];
+    let nextCursor = null;
+    if (last instanceof Api.ForumTopic && response.count > response.topics.length) {
+      const message = response.messages.find((item) => item.id === last.topMessage);
+      const lastMessageDate = message && "date" in message ? message.date : last.date;
+      nextCursor = {
+        offset_date: lastMessageDate,
+        offset_id: last.topMessage,
+        offset_topic: last.id
+      };
+    }
+
+    return { topics, count: response.count, next_cursor: nextCursor };
   }
 
   getStatus(): AuthStatus {
@@ -284,7 +354,7 @@ export class TelegramRuntimeClient {
 
   private async resolveInputEntity(client: TelegramClientLike, value: unknown): Promise<unknown> {
     if (!client.getInputEntity) {
-      throw new Error("Telegram client does not support unread history reads.");
+      throw new Error("Telegram client does not support peer resolution.");
     }
 
     const input = peerInputFromValue(value);

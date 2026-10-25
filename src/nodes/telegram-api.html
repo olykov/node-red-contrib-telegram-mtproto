@@ -136,6 +136,48 @@
   <p>Enable <code>Unread Only</code> to return only unread incoming messages for the peer.</p>
 </script>
 
+<script type="text/html" data-template-name="telegram-api-get">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-account"><i class="fa fa-user"></i> Account</label>
+    <input type="text" id="node-input-account" />
+  </div>
+  <div class="form-row">
+    <label for="node-input-operation"><i class="fa fa-download"></i> Get</label>
+    <select id="node-input-operation">
+      <option value="history">History</option>
+      <option value="chats">Chats</option>
+      <option value="topics">Topics</option>
+    </select>
+  </div>
+  <div class="form-row telegram-api-get-peer">
+    <label for="node-input-peer"><i class="fa fa-comment"></i> Default Peer</label>
+    <input type="text" id="node-input-peer" placeholder="@username or numeric id" />
+  </div>
+  <div class="form-row telegram-api-get-history">
+    <label for="node-input-limit"><i class="fa fa-list-ol"></i> Limit</label>
+    <input type="number" id="node-input-limit" placeholder="10" />
+  </div>
+  <div class="form-row telegram-api-get-history">
+    <label for="node-input-includeRaw"><i class="fa fa-code"></i> Include Raw</label>
+    <input type="checkbox" id="node-input-includeRaw" style="width:auto" />
+  </div>
+  <div class="form-row telegram-api-get-history">
+    <label for="node-input-unreadOnly"><i class="fa fa-envelope"></i> Unread Only</label>
+    <input type="checkbox" id="node-input-unreadOnly" style="width:auto" />
+  </div>
+</script>
+
+<script type="text/html" data-help-name="telegram-api-get">
+  <p>Reads history, dialogs, or forum topics through the configured Telegram user account.</p>
+  <p><b>History:</b> set <code>msg.telegram.peer</code> or a default peer. The output is an array of messages.</p>
+  <p><b>Chats:</b> reads all dialogs, including archived chats. Set optional <code>msg.payload.query</code> to filter titles and usernames.</p>
+  <p><b>Topics:</b> set <code>msg.payload.chat_id</code> and optional <code>msg.payload.query</code>. The output contains topic IDs, titles, count, and <code>next_cursor</code> for another page. Only forum chats support this operation.</p>
+</script>
+
 <style>
   .telegram-api-auth-panel .telegram-api-auth-body {
     width: calc(100% - 110px);
@@ -447,6 +489,33 @@
       inputs: 1,
       label: function() {
         return this.name || "telegram-api history";
+      },
+      outputs: 1
+    });
+
+    registerSimpleNode("telegram-api-get", {
+      defaults: {
+        account: { required: true, type: "telegram-api-config" },
+        operation: { value: "history" },
+        includeRaw: { value: false },
+        limit: { value: 10, validate: RED.validators.number() },
+        name: { value: "" },
+        peer: { value: "" },
+        unreadOnly: { value: false }
+      },
+      icon: "font-awesome/fa-download",
+      inputs: 1,
+      label: function() {
+        return this.name || "telegram-api get";
+      },
+      oneditprepare: function() {
+        function showOperationFields() {
+          var operation = $("#node-input-operation").val();
+          $(".telegram-api-get-peer").toggle(operation !== "chats");
+          $(".telegram-api-get-history").toggle(operation === "history");
+        }
+        $("#node-input-operation").on("change", showOperationFields);
+        showOperationFields();
       },
       outputs: 1
     });
