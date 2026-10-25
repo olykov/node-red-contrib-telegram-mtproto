@@ -7,9 +7,10 @@ status: review
 priority: medium
 type: feature
 created: 2026-10-25T20:42:59Z
-updated: 2026-10-25T20:44:35Z
+updated: 2026-10-25T20:44:50Z
 start_date: 2026-10-25T20:42:59Z
-commits: []
+commits:
+  - 836fe0c
 tests:
   - test/telegram-get.test.ts
 ---
@@ -43,3 +44,7 @@ Implementation authorized through local preparation before push. Publishing, ins
 ### 2026-10-25T20:44:35Z — Maintainer
 
 Version 0.1.4 prepared. All 20 tests, TypeScript checking, build and package dry-run passed. Seven native media categories are supported. Text-only selection is explicitly left to the calling flow so the history array and pagination contract stay intact. Awaiting approval for push and subsequent installation.
+
+### 2026-10-25T20:44:50Z — Maintainer
+
+Implementation recorded in commit 836fe0c. Package prepared for review before push.
